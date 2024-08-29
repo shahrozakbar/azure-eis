@@ -1,40 +1,23 @@
-# Define the paths to the IIS log directories
-$logPaths = @(
-    "C:\inetpub\logs\",
-    "D:\inetpub\logs\",
-    "E:\inetpub\logs\"
-)
+$logPaths = @("C:\inetpub\logs\", "D:\inetpub\logs\", "E:\inetpub\logs\")
+$maxDaysToKeep = -30
+$dateThreshold = (Get-Date).AddDays($maxDaysToKeep)
+$deleteCount = 0
 
-# Function to check if the IIS feature is installed
-Function Check-IISFeature {
-    # Check if IIS is installed on a client version of Windows
-    $iisFeature = Get-WindowsOptionalFeature -Online -FeatureName IIS-WebServerRole
-    if ($iisFeature.State -eq "Enabled") {
-        Write-Output "IIS is installed and operational."
-    } else {
-        Write-Output "IIS is not installed. Please install IIS to proceed."
-        Exit
-    }
-}
 
-# Function to delete log files older than 30 days
-Function Delete-OldLogs {
-    foreach ($path in $logPaths) {
-        if (Test-Path $path) {
-            Write-Output "Checking log files in $path"
-            Get-ChildItem -Path $path -Recurse -File |
-                Where-Object { $_.LastWriteTime -lt (Get-Date).AddDays(-30) } |
-                ForEach-Object {
-                    Write-Output "Deleting file: $($_.FullName)"
-                    Remove-Item -Path $_.FullName -Force
-                }
-        } else {
-            Write-Output "Directory $path does not exist."
+foreach ($logPath in $logPaths) {
+    if (Test-Path $logPath) {
+        Write-Output "Checking: $logPath"
+
+        $itemsToDelete = Get-ChildItem -Path $logPath -Recurse -Filter *.log | Where-Object { $_.LastWriteTime -lt $dateThreshold }
+
+        foreach ($item in $itemsToDelete) {
+            Write-Output "Deleting: $($item.FullName)"
+            Remove-Item -Path $item.FullName -Force -Verbose
+            $deleteCount++
         }
+    } else {
+        Write-Output "Path does not exist: $logPath"
     }
 }
 
-# Main script execution
-Check-IISFeature
-Delete-OldLogs
-
+Write-Output "Total files deleted: $deleteCount"
