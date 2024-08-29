@@ -7,8 +7,9 @@ $logPaths = @(
 
 # Function to check if the IIS feature is installed
 Function Check-IISFeature {
-    $iisFeature = Get-WindowsFeature -Name Web-Server
-    if ($iisFeature.Installed) {
+    # Check if IIS is installed on a client version of Windows
+    $iisFeature = Get-WindowsOptionalFeature -Online -FeatureName IIS-WebServerRole
+    if ($iisFeature.State -eq "Enabled") {
         Write-Output "IIS is installed and operational."
     } else {
         Write-Output "IIS is not installed. Please install IIS to proceed."
@@ -36,3 +37,4 @@ Function Delete-OldLogs {
 # Main script execution
 Check-IISFeature
 Delete-OldLogs
+
